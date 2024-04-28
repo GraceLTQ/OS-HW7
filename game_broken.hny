@@ -1,0 +1,17 @@
+# THIS IS BROKEN! DO THIS INCORRECTLY ;)
+
+# returns the initial state of a game object;
+def Game(): 
+    pass
+
+# the code that an umpire thread runs;
+def game_umpire(g): 
+    pass 
+
+# player id wants to join the game. Returns a tuple consisting of team1 and team 2. Every player should see the same tuple of teams;
+def game_join(g, id):
+    pass 
+
+# player id is done and leaves the game.
+def game_leave(g, id): 
+    pass
