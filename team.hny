@@ -1,0 +1,38 @@
+from game import *
+from synch import *
+
+const NPLAYERS = 6
+
+thegame = Game()
+
+# Player thread function to simulate joining and leaving a game
+def player(id):
+    # Join a game
+    acquire(?thegame->game_lock)
+    let (team1, team2) = game_join(?thegame, id):
+      assert id in (team1 | team2)  # Ensure player is in one of the teams
+    release(?thegame->game_lock)
+
+    # Play
+
+    # Leave a game
+    acquire(?thegame->game_lock)
+    game_leave(?thegame, id)
+    assert (team1 & team2) == set()  # Teams must be disjoint
+    assert (len(team1) == len(team2)) or ((len(team1) + 1) == len(team2)) or ((len(team2) + 1) == len(team1))  # Teams of equal size or off by one
+    release(?thegame->game_lock)
+
+spawn eternal game_umpire(?thegame )
+
+# Spawning players
+for id in {1..NPLAYERS}:
+    spawn player(id)
+
+# # Testing synchronization and correctness
+# def test_game():
+#     acquire(?thegame->game_lock)
+#     assert not thegame->players_waiting  # No players should be waiting to join
+#     assert not thegame->game_in_progress  # No game should be in progress
+#     release(?thegame->game_lock)
+
+# spawn test_game()
