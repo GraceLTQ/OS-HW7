@@ -16,50 +16,47 @@ def Game() returns game:
 
 # the code that an umpire thread runs;
 def game_umpire(g):
-    atomically:
-        while True:
-            acquire(?g->game_lock)
-            # Wait until there are enough players
-            while len(g->players_waiting) < 2:
-                wait(?g->game_started, ?g->game_lock)
+    while True:
+        acquire(?g->game_lock)
+        # Wait until there are enough players
+        while len(g->players_waiting) < 2:
+            wait(?g->game_started, ?g->game_lock)
 
-            # Form teams
-            all_players = list(g->players_waiting)
-            mid_point = len(all_players) // 2
-            g->team1 = set(subseq(all_players, 0, mid_point))
-            if (len(all_players) % 2) != 0:
-                g->team2 = set(subseq(all_players, mid_point, len(all_players)-1))
-            else:
-                g->team2 = set(subseq(all_players, mid_point, len(all_players)))
-            # g->players_waiting = {}
-            g->game_in_progress = True
-            notify(?g->team_formed)
-            
-            # Wait for the game to end
-            while g->game_in_progress:
-                wait(?g->game_ended, ?g->game_lock)
-            
-            release(?g->game_lock)
+        # Form teams
+        all_players = list(g->players_waiting)
+        mid_point = len(all_players) // 2
+        g->team1 = set(subseq(all_players, 0, mid_point))
+        if (len(all_players) % 2) != 0:
+            g->team2 = set(subseq(all_players, mid_point, len(all_players)-1))
+        else:
+            g->team2 = set(subseq(all_players, mid_point, len(all_players)))
+        # g->players_waiting = {}
+        g->game_in_progress = True
+        notify(?g->team_formed)
+        
+        # Wait for the game to end
+        while g->game_in_progress:
+            wait(?g->game_ended, ?g->game_lock)
+        
+        release(?g->game_lock)
 
 # player id wants to join the game. Returns a tuple consisting of team1 and team 2. Every player should see the same tuple of teams;
 def game_join(g, id):
-    atomically:
-        acquire(?g->game_lock)
-        g->players_waiting.add(id)
-        if len(g->players_waiting) >= 2:
-            notify(?g->game_started)  # Enough players to start forming teams
-        while (id not in g->team1) and (id not in g->team2):
-            wait(?g->team_formed, ?g->game_lock) # Wait until assigned to a team
-        release(?g->game_lock)
-        return (g->team1, g->team2)
+    acquire(?g->game_lock)
+    g->players_waiting.add(id)
+    if len(g->players_waiting) >= 2:
+        notify(?g->game_started)  # Enough players to start forming teams
+    while (id not in g->team1) and (id not in g->team2):
+        wait(?g->team_formed, ?g->game_lock) # Wait until assigned to a team
+    release(?g->game_lock)
+    return (g->team1, g->team2)
 
 # player id is done and leaves the game.
 def game_leave(g, id):
-    atomically: 
-        acquire(?g->game_lock)
-        g->team1.discard(id)
-        g->team2.discard(id)
-        if (len(g->team1) == 0) and (len(g->team2) == 0):
-            g->game_in_progress = False
-            notify(?g->game_ended)  # Game ended, reset for next round
-        release(?g->game_lock)
+    acquire(?g->game_lock)
+    remove(g->team1, id) # set module method in textbook
+    remove(g->team2, id)
+    if (len(g->team1) == 0) and (len(g->team2) == 0):
+        g->game_in_progress = False
+        notify(?g->game_ended)  # Game ended, reset for next round
+    release(?g->game_lock)
