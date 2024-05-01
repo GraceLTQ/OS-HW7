@@ -1,4 +1,4 @@
-from game import *
+from game_broken import *
 
 const NPLAYERS = 4
 
