@@ -1,0 +1,36 @@
+from game import *
+
+const NPLAYERS = 4
+
+thegame = Game()
+nplayers = NPLAYERS
+nstarted = 0
+
+def again() returns success:
+    atomically:
+        nplayers -= 1
+        if nplayers == 0:
+            success = nstarted == 1
+        else:
+            success = choose { False, True }
+        if success:
+            nstarted += 1
+
+def player(self):
+    while again():
+        # Join a game
+        let (team1, team2) = game_join(?thegame, self):
+            assert self in (team1 | team2)
+            atomically:
+                nstarted -= 1
+                nplayers += 1
+
+        # Play
+
+        # Leave a game
+        game_leave(?thegame, self)
+
+spawn eternal game_umpire(?thegame)
+
+for id in { 1 .. NPLAYERS }:
+    spawn player(id)
