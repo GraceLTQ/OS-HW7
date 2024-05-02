@@ -1,4 +1,5 @@
-from game_broken import *
+from game import *
+from set import *
 
 const NPLAYERS = 4
 
@@ -21,6 +22,13 @@ def player(self):
         # Join a game
         let (team1, team2) = game_join(?thegame, self):
             assert self in (team1 | team2)
+
+            # check if teams are disjoint
+            assert (team1 & team2) == {}
+
+            # check if teams are same size
+            assert len(team1) == len(team2)
+
             atomically:
                 nstarted -= 1
                 nplayers += 1
