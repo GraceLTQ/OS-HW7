@@ -8,6 +8,7 @@ def Game() returns game:
         .players_waiting: {},
         .team1: {},
         .team2: {},
+        .players_waiting_to_leave: {},
         .game_lock: Lock(),
         .team_formed: Condition(),
         .game_started: Condition(),
@@ -20,7 +21,7 @@ def game_umpire(g):
     while True:
         acquire(?g->game_lock)
         # Wait until there are enough players
-        while len(g->players_waiting) < 2:
+        while (len(g->players_waiting) < 2):
             wait(?g->game_started, ?g->game_lock)
 
         # Form teams
@@ -38,27 +39,35 @@ def game_umpire(g):
         
         # Wait for the game to end
         while g->game_in_progress:
-            wait(?g->game_ended, ?g->game_lock)
-        
+            wait(?g->game_ended, ?g->game_lock) 
+                
         release(?g->game_lock)
 
 # player id wants to join the game. Returns a tuple consisting of team1 and team 2. Every player should see the same tuple of teams;
 def game_join(g, id) returns output:
     acquire(?g->game_lock)
+    # if there's a game going on, then wait for it to end 
+    while g->game_in_progress:
+        wait(?g->game_ended, ?g->game_lock)
     g->players_waiting = add(g->players_waiting, id)
     if len(g->players_waiting) >= 2:
         notify(?g->game_started)  # Enough players to start forming teams
-    while (id not in g->team1) and (id not in g->team2):
-        wait(?g->team_formed, ?g->game_lock) # Wait until assigned to a team
+    # Wait until assigned to a team
+    while (({id}|g->team1) != g->team1) and (({id}|g->team2) != g->team2):
+        wait(?g->team_formed, ?g->game_lock) 
+        
     output = (g->team1, g->team2)
     release(?g->game_lock)
 
 # player id is done and leaves the game.
 def game_leave(g, id):
     acquire(?g->game_lock)
-    g->team1 = remove(g->team1, id) # set module method in textbook
-    g->team2 = remove(g->team2, id)
-    if (len(g->team1) == 0) and (len(g->team2) == 0):
+    g->players_waiting_to_leave |= {id}
+    if g->players_waiting_to_leave == (g->team1 | g->team2):
+        g->team1 = {}
+        g->team2 = {}
+        g->players_waiting_to_leave = {}
         g->game_in_progress = False
-        notify(?g->game_ended)  # Game ended, reset for next round
+        notifyAll(?g->game_ended)  # Game ended, reset for next round
     release(?g->game_lock)
+
